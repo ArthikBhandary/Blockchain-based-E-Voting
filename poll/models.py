@@ -20,6 +20,11 @@ class Party(models.Model):
     motto = models.TextField()
     symbol = models.ImageField(upload_to=party_symbol_name)
 
+    def delete(self, *args, **kwargs):
+        if self.symbol:
+            self.symbol.delete()
+        super(Party, self).delete(*args, **kwargs)
+
 
 class Candidate(models.Model):
     candidateID = models.IntegerField(primary_key=True)

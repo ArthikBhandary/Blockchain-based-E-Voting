@@ -3,8 +3,8 @@
 {% block content %}
 <body>
     <div class="row text-center p-3">
-        {% if candidates %}
-        {% for candidate in candidates %}
+        {% if object_list %}
+        {% for candidate in object_list %}
         <div class="col-md-4">
             <div class="card p-3 mt-5 mx-auto"
             style="border-radius: 25px; width: 30vw; height: 70vh; box-shadow: 0 0.5rem 1rem 0 rgba(0, 0, 0, 0.1);

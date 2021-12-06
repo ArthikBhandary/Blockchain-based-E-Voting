@@ -22,7 +22,7 @@ class VoteView(ListView, LoginRequiredMixin):
     template_name = "poll/vote.html"
 
     def get_queryset(self):
-        return Candidate.objects.filter()
+        return Candidate.objects.filter(constituency=self.request.user.constituency)
 
 
 def vote(request):
