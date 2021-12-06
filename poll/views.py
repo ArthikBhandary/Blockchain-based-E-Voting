@@ -1,8 +1,10 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render,redirect
-from . import models
+from django.views.generic import TemplateView, ListView
+
+from poll.models import Candidate, Voter, Vote, Block
 import math
 from datetime import datetime
-from django.contrib.admin.forms import AuthenticationForm
 import time, datetime
 from hashlib import sha512, sha256
 from .merkleTree import merkleTree
@@ -11,29 +13,30 @@ from django.conf import settings
 
 resultCalculated = False
 
-def home(request):
-    return render(request, 'poll/home.html')
+
+class HomeView(TemplateView):
+    template_name = "poll/home.html"
+
+
+class VoteView(ListView, LoginRequiredMixin):
+    template_name = "poll/vote.html"
+
+    def get_queryset(self):
+        return Candidate.objects.filter()
+
 
 def vote(request):
-    candidates = models.Candidate.objects.all()
+    candidates = Candidate.objects.all()
     context = {'candidates': candidates}
     return render(request, 'poll/vote.html', context)
 
-def login(request):
-    if request.method == 'POST':
-        form = AuthenticationForm(data=request.POST)
-        if form.is_valid():
-            return redirect('vote')
-    else:  
-        form = AuthenticationForm()
-    return render(request, 'poll/login.html/')
+
 
 def create(request, pk):
-    print(request.user)
-    voter = models.Voter.objects.filter(username=request.user.username)[0]
+    voter = Voter.objects.filter(username=request.user.username)[0]
     if request.method == 'POST' and request.user.is_authenticated and not voter.has_voted:
         vote = pk
-        lenVoteList = len(models.Vote.objects.all())
+        lenVoteList = len(Vote.objects.all())
         if (lenVoteList > 0):
             block_id = math.floor(lenVoteList / 5) + 1
         else:
@@ -51,7 +54,7 @@ def create(request, pk):
         hfromSignature = pow(signature, pub_key['e'], pub_key['n'])
 
         if(hfromSignature == h):
-            new_vote = models.Vote(vote=pk)
+            new_vote = Vote(vote=pk)
             new_vote.block_id = block_id
             new_vote.save()
             status = 'Ballot signed successfully'
@@ -77,11 +80,11 @@ def seal(request):
 
     if request.method == 'POST':
 
-        if (len(models.Vote.objects.all()) % 5 != 0):
+        if (len(Vote.objects.all()) % 5 != 0):
             redirect("login")
         else:
             global prev_hash
-            transactions = models.Vote.objects.order_by('block_id').reverse()
+            transactions = Vote.objects.order_by('block_id').reverse()
             transactions = list(transactions)[:5]
             block_id = transactions[0].block_id
 
@@ -100,7 +103,7 @@ def seal(request):
                     break
                 nonce += 1
             
-            block = models.Block(id=block_id,prev_hash=prev_hash,self_hash=self_hash,merkle_hash=merkle_hash,nonce=nonce,timestamp=timestamp)
+            block = Block(id=block_id,prev_hash=prev_hash,self_hash=self_hash,merkle_hash=merkle_hash,nonce=nonce,timestamp=timestamp)
             prev_hash = self_hash
             block.save()
             print('Block {} has been mined'.format(block_id))
@@ -123,7 +126,7 @@ def verify(request):
         else:
             verification = 'Verification successful. All votes are intact!'
             error = False
-            votes = models.Vote.objects.order_by('timestamp')
+            votes = Vote.objects.order_by('timestamp')
             votes = [retDate(x) for x in votes]
             
         context = {'verification':verification, 'error':error, 'votes':votes}
@@ -139,24 +142,24 @@ def result(request):
                     will resolve the issue".format(voteVerification), 'error':True})
 
         if not resultCalculated:
-            list_of_votes = models.Vote.objects.all()
+            list_of_votes = Vote.objects.all()
             for vote in list_of_votes:
-                candidate = models.Candidate.objects.filter(candidateID=vote.vote)[0]
+                candidate = Candidate.objects.filter(candidateID=vote.vote)[0]
                 candidate.count += 1
                 candidate.save()
                 
             resultCalculated = True            
 
-        context = {"candidates":models.Candidate.objects.order_by('count'), "winner":models.Candidate.objects.order_by('count').reverse()[0]}
+        context = {"candidates": Candidate.objects.order_by('count'), "winner": Candidate.objects.order_by('count').reverse()[0]}
         return render(request, 'poll/results.html', context)
 
 
 def verifyVotes():
-    block_count = models.Block.objects.count()
+    block_count = Block.objects.count()
     tampered_block_list = []
     for i in range (1, block_count+1):
-        block = models.Block.objects.get(id=i)
-        transactions = models.Vote.objects.filter(block_id=i)
+        block = Block.objects.get(id=i)
+        transactions = Vote.objects.filter(block_id=i)
         str_transactions = [str(x) for x in transactions]
 
         merkle_tree = merkleTree.merkleTree()
