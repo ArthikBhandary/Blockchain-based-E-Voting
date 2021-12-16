@@ -71,12 +71,25 @@ WSGI_APPLICATION = 'blockchain_voting.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
+# AUTH_USER_MODEL = 'poll.User'
+
+# DATABASE_ROUTERS = ['poll.dbRouter.PollRouter']
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+    },
+    # 'auth_db': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': os.path.join(BASE_DIR, 'auth.sqlite3'),
+    # },
+    # 'db_proj': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': os.path.join(BASE_DIR, 'proj.sqlite3'),
+    # },
 }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
